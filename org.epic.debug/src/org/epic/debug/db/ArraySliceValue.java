@@ -7,16 +7,16 @@ import org.eclipse.debug.core.model.DebugElement;
 import org.eclipse.debug.core.model.IValue;
 import org.eclipse.debug.core.model.IVariable;
 
-public class ArraySliceValue extends DebugElement implements IValue
+public class ArraySliceValue extends PerlValue
 {
-	private final IVariable[] elements;
+	private final PerlVariable[] elements;
 	private final int startIndex;
 	
-	public ArraySliceValue(PerlVariable array, List elements, int startIndex)
+	public ArraySliceValue(PerlVariable array, List<PerlVariable> elements, int startIndex)
 	{
 		super(array.getDebugTarget());
 		
-		this.elements = (IVariable[]) elements.toArray(new IVariable[elements.size()]);
+		this.elements = (PerlVariable[]) elements.toArray(new PerlVariable[elements.size()]);
 		this.startIndex = startIndex;
 	}
 	
@@ -39,8 +39,11 @@ public class ArraySliceValue extends DebugElement implements IValue
     {
         return "...";
     }
-
-    public IVariable[] getVariables() throws DebugException
+    public String getDetailValue() throws DebugException
+    {
+        return "...";
+    }    
+    public PerlVariable[] getVariables() throws DebugException
     {
         return elements;
     }

@@ -24,6 +24,13 @@ public abstract class PerlVariable extends DebugElement implements IVariable
     private String quotedName;
     private Boolean contentChanged;
     
+    protected PerlVariable(IDebugTarget target)
+    {
+      super(target);
+      db = null;
+      frame = null;
+      entity = null;   
+    }
     /**
      * @param db        interface to the Perl debugger
      * @param frame     stack frame which contains this variable
@@ -106,7 +113,7 @@ public abstract class PerlVariable extends DebugElement implements IVariable
      *         to another variable and so on, until a value is
      *         eventually reached or a circular reference is formed. 
      */
-    public IValue getValue() throws DebugException
+    public PerlValue getValue() throws DebugException
     {
         // Note: this method, in general, lazily retrieves
         // the variable's value by querying the Perl debugger
@@ -290,13 +297,13 @@ public abstract class PerlVariable extends DebugElement implements IVariable
             return;
         }
         
-        LinkedList queue = new LinkedList();
-        Set visited = new HashSet(); // to avoid infinite recursion
+        LinkedList<PerlVariable[]> queue = new LinkedList<PerlVariable[]>();
+        Set<String> visited = new HashSet<String>(); // to avoid infinite recursion
         queue.add(getPerlVariables(getValue()));
 
         while (!queue.isEmpty())
         {            
-            IVariable[] vars = (IVariable[]) queue.removeFirst();
+            PerlVariable[] vars = (PerlVariable[]) queue.removeFirst();
         
             for (int i = 0; i < vars.length; i++)
             {                
@@ -316,17 +323,17 @@ public abstract class PerlVariable extends DebugElement implements IVariable
         contentChanged = Boolean.FALSE;
     }
     
-    private IVariable[] getPerlVariables(IValue value) throws DebugException
+    private PerlVariable[] getPerlVariables(PerlValue value) throws DebugException
     {
-    	IVariable[] vars = value.getVariables();
-    	if (vars.length == 0 || vars[0] instanceof PerlVariable) return vars;
+    	PerlVariable[] vars = value.getVariables();
+    	if (vars.length == 0 || !(vars[0] instanceof ArraySlice)) return vars;
     	else
     	{
     		assert vars[0] instanceof ArraySlice;
-    		List elements = new ArrayList();
+    		List<PerlVariable> elements = new ArrayList<PerlVariable>();
     		for (int i = 0; i < vars.length; i++)
     			elements.addAll(Arrays.asList(getPerlVariables(vars[i].getValue()))); 
-    		return (IVariable[]) elements.toArray(new IVariable[elements.size()]);
+    		return (PerlVariable[]) elements.toArray(new PerlVariable[elements.size()]);
     	}
     }
     

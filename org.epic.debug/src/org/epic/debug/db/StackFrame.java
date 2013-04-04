@@ -376,7 +376,7 @@ public class StackFrame extends DebugElement implements IStackFrame
         
             for (int i = 0; i < vars.length; i++)
             {
-                if (!(vars[i] instanceof PerlVariable))
+                if ((vars[i] instanceof ArraySlice))
                     continue; // could be an ArraySlice
                 
                 PerlVariable var = (PerlVariable) vars[i];

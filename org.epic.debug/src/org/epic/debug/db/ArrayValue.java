@@ -5,7 +5,6 @@ import java.util.*;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.debug.core.DebugException;
 import org.eclipse.debug.core.model.IDebugTarget;
-import org.eclipse.debug.core.model.IVariable;
 import org.epic.debug.PerlDebugPlugin;
 
 /**
@@ -15,7 +14,7 @@ import org.epic.debug.PerlDebugPlugin;
  */
 class ArrayValue extends PerlValue
 {
-    private final IVariable[] vars;
+    private final PerlVariable[] vars;
 
     public ArrayValue(IDebugTarget target, PerlVariable holder)
         throws DebugException
@@ -25,7 +24,7 @@ class ArrayValue extends PerlValue
         this.vars = parseArrayContent(dumpEntity("dump_array_expr"));
     }
     
-    public IVariable[] getVariables() throws DebugException
+    public PerlVariable[] getVariables() throws DebugException
     {
         return vars;
     }
@@ -35,11 +34,11 @@ class ArrayValue extends PerlValue
         return vars.length > 0;
     }
     
-    private IVariable[] parseArrayContent(String content) throws DebugException
+    private PerlVariable[] parseArrayContent(String content) throws DebugException
     {
         DumpedEntityReader r = new DumpedEntityReader(content);
-        List slices = null;
-        List vars = new ArrayList();
+        List<PerlVariable> slices = null;
+        List<PerlVariable> vars = new ArrayList<PerlVariable>();
         
         try
         {
@@ -55,21 +54,21 @@ class ArrayValue extends PerlValue
                 
                 if (vars.size() == 1000)
                 {
-                	if (slices == null) slices = new ArrayList();
+                	if (slices == null) slices = new ArrayList<PerlVariable>();
                 	slices.add(new ArraySlice(getHolder(), vars, sliceStartI));
                 	sliceStartI = i;
-                	vars = new ArrayList();
+                	vars = new ArrayList<PerlVariable>();
                 }
             }
             if (slices != null)
             {
             	if (!vars.isEmpty())
             		slices.add(new ArraySlice(getHolder(), vars, sliceStartI));
-            	return (IVariable[]) slices.toArray(new IVariable[slices.size()]);
+            	return (PerlVariable[]) slices.toArray(new PerlVariable[slices.size()]);
             }
             else
             {
-            	return (IVariable[]) vars.toArray(new IVariable[vars.size()]);
+            	return (PerlVariable[]) vars.toArray(new PerlVariable[vars.size()]);
             }
         }
         catch (Exception e)

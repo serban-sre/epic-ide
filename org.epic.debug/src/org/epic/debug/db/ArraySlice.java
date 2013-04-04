@@ -18,13 +18,13 @@ import org.epic.debug.PerlDebugPlugin;
  * 
  * @author jploski
  */
-class ArraySlice extends DebugElement implements IVariable
+class ArraySlice extends PerlVariable
 {
 	private final ArraySliceValue value;
 
 	protected ArraySlice(
 			PerlVariable array,
-			List elements,
+			List<PerlVariable> elements,
 			int startIndex) throws DebugException 
     {
 		super(array.getDebugTarget());
@@ -42,14 +42,14 @@ class ArraySlice extends DebugElement implements IVariable
         return null;
     }
 
-    public IValue getValue() throws DebugException
+    public ArraySliceValue getValue() throws DebugException
     {
         return value;
     }
 
     public boolean hasValueChanged() throws DebugException
     {
-    	IVariable[] vars = value.getVariables();
+    	PerlVariable[] vars = value.getVariables();
     	
     	for (int i  = 0; i < vars.length; i++)
     		if (vars[i].hasValueChanged()) return true;
@@ -98,4 +98,10 @@ class ArraySlice extends DebugElement implements IVariable
             "Operation not supported",
             null));
     }
+
+	@Override
+	public String getExpression() throws DebugException 
+	{
+		return null;
+	}
 }

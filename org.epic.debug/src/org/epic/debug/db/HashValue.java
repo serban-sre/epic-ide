@@ -15,7 +15,7 @@ import org.epic.debug.PerlDebugPlugin;
  */
 class HashValue extends PerlValue
 {
-    private final IVariable[] vars;
+    private final PerlVariable[] vars;
 
     public HashValue(IDebugTarget target, PerlVariable holder)
         throws DebugException
@@ -25,7 +25,7 @@ class HashValue extends PerlValue
         this.vars = parseHashContent(dumpEntity("dump_hash_expr"));
     }
     
-    public IVariable[] getVariables() throws DebugException
+    public PerlVariable[] getVariables() throws DebugException
     {
         return vars;
     }
@@ -35,10 +35,10 @@ class HashValue extends PerlValue
         return vars.length > 0;
     }
     
-    private IVariable[] parseHashContent(String content) throws DebugException
+    private PerlVariable[] parseHashContent(String content) throws DebugException
     {
         DumpedEntityReader r = new DumpedEntityReader(content);
-        List vars = new ArrayList();
+        List<PerlVariable> vars = new ArrayList<PerlVariable>();
         
         try
         {
@@ -60,6 +60,6 @@ class HashValue extends PerlValue
                 e));
         }
 
-        return (IVariable[]) vars.toArray(new IVariable[vars.size()]);
+        return (PerlVariable[]) vars.toArray(new PerlVariable[vars.size()]);
     }
 }

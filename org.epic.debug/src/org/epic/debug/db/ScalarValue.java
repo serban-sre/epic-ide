@@ -13,7 +13,7 @@ import org.eclipse.debug.core.model.IVariable;
  */
 class ScalarValue extends PerlValue
 {
-    private static final IVariable[] NO_VARIABLES = new IVariable[0];
+    private static final PerlVariable[] NO_VARIABLES = new PerlVariable[0];
     
     public ScalarValue(IDebugTarget target, PerlVariable holder)
         throws DebugException
@@ -21,7 +21,7 @@ class ScalarValue extends PerlValue
         super(target, holder);
     }
 
-    public IVariable[] getVariables() throws DebugException
+    public PerlVariable[] getVariables() throws DebugException
     {
         return NO_VARIABLES;
     }

@@ -1,6 +1,7 @@
 package org.epic.debug.db;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -16,138 +17,196 @@ import org.epic.debug.ui.action.ShowVarAddressActionDelegate;
  */
 public abstract class PerlValue extends DebugElement implements IValue
 {
-    private static final String DB_DUMP_ENTITY; 
-    
-    private final PerlVariable holder;
-    
-    static
-    {
-        DB_DUMP_ENTITY = HelperScript.load("dump_entity.pl");
-    }
-    
-    protected PerlValue(IDebugTarget target, PerlVariable holder)
-        throws DebugException
-    {
-        super(target);
-        
-        this.holder = holder;
-    }
-    
-    /**
-     * @return the value to be displayed in the detail section
-     *         of the Variables view
-     */
-    public String getDetailValue() throws DebugException
-    {
-        DumpedEntity entity = holder.getDumpedEntity();
-        
-        if (entity.isCyclicReference()) return "cyclic reference";
-        else if (!entity.isDefined()) return "undef";
-        else if (entity.getValue() != null) return "'" + entity.getValue() + "'";
-        else if (hasVariables()) return "...";
-        else if (holder.isArray()) return "[]";
-        else if (holder.isHash()) return "{}";
-        else return "";
-    }
-    
-    /**
-     * @return the variable which contains this value
-     */
-    public PerlVariable getHolder()
-    {
-        return holder;
-    }
+	private static final String DB_DUMP_ENTITY; 
 
-    /**
-     * @see org.epic.debug.db.PerlVariable#getReferenceTypeName
-     */
-    public String getReferenceTypeName() throws DebugException
-    {
-        return holder.getReferenceTypeName();
-    }
+	private final PerlVariable holder;
 
-    /**
-     * @return the string displayed for this value in the overview
-     *         section of the Variables view
-     */
-    public String getValueString() throws DebugException
-    {
-        DumpedEntity entity = holder.getDumpedEntity();
-        String[] refChain = entity.getReferenceChain();
+	static
+	{
+		DB_DUMP_ENTITY = HelperScript.load("dump_entity.pl");
+	}
+	protected PerlValue(IDebugTarget target)
+	{
+		super(target);
+		holder = null;
+	}
+	protected PerlValue(IDebugTarget target, PerlVariable holder)
+			throws DebugException
+			{
+		super(target);
 
-        boolean suppressSelfAddress = !ShowVarAddressActionDelegate.getPreferenceValue();
-        int start = suppressSelfAddress ? 1 : 0;
-        
-        StringBuffer buf = new StringBuffer();
-        for (int i = start; i < refChain.length; i++)
-        {
-            if (i > start) buf.append("->");
-            buf.append(refChain[i]);
-        }
-        
-        String detail = getDetailValue();
-        if (detail.length() > 0)
-        {
-            if (buf.length() > 0) buf.append('=');
-            if (detail.length() > 128)
-                detail = detail.substring(0, 128) + "...";
-            buf.append(detail);
-        }
-        return buf.toString();
-    }
+		this.holder = holder;
+			}
 
-    public abstract IVariable[] getVariables() throws DebugException;
+	/**
+	 * @return the value to be displayed in the detail section
+	 *         of the Variables view
+	 */
+	public String getDetailValue() throws DebugException
+	{
+		DumpedEntity entity = this.holder.getDumpedEntity();
+		if (entity.isCyclicReference()) return "cyclic reference";
+		if (!(entity.isDefined())) return "undef";
+		if (entity.getValue() != null) return "'" + entity.getValue() + "'";
+		// if this is ARRAY
+		if (this.holder.isArray()) {
+			ArrayList<String> result = new ArrayList<String>();
+			PerlVariable[] ivarArr = getVariables();
+			if ((ivarArr == null) || (ivarArr.length == 0)) return "[ ]";
+			if (ivarArr[0] instanceof ArraySlice) {
+				return " ... ";
+			}
+			int maxArrayElements = 1;
+			for (PerlVariable iv : ivarArr) {
+				if (maxArrayElements > 10) {
+					result.add("...");
+					break;
+				}
+				String refType = iv.getReferenceTypeName();
+				if (refType.equals("SCALAR")) {
+					result.add(iv.getValue().getValueString());
+				}  else
+					result.add(iv.getValue().getDataStructValueString());
+			}
+			return result.toString();
+		}
+		// if this is HASH
+		if (this.holder.isHash()) {
+			ArrayList<String> result = new ArrayList<String>();
+			PerlVariable[] ivarArr = getVariables();
+			if ((ivarArr == null) || (ivarArr.length == 0)) return "{ }";
+			int maxHashElements = 1;
+			for (PerlVariable iv : ivarArr) {
+				if (maxHashElements > 10) {
+					result.add("...");
+					break;
+				}
+				if (iv.getReferenceTypeName().equals("SCALAR"))
+					result.add(iv.getName() + " => " + iv.getValue().getValueString());
+				else 
+					result.add(iv.getName() + " => " + iv.getValue().getDataStructValueString());
+			}
+			String resultList = result.toString();
+			resultList = "{" + resultList.substring(1, resultList.length() - 1) + "}";
+			return resultList;
+		}
+		// no match
+		return "NA";
+	}
+	public String getDataStructValueString() throws DebugException
+	{
+		DumpedEntity entity = this.holder.getDumpedEntity();
+		String[] refChain = entity.getReferenceChain();
 
-    public abstract boolean hasVariables() throws DebugException;
+		boolean suppressSelfAddress = !(ShowVarAddressActionDelegate.getPreferenceValue());
+		int start = (suppressSelfAddress) ? 1 : 0;
 
-    public boolean isAllocated() throws DebugException
-    {
-        return true;
-    }
+		StringBuffer buf = new StringBuffer();
+		for (int i = start; i < refChain.length; ++i)
+		{
+			if (i > start) buf.append("->");
+			buf.append(refChain[i]);
+		}
+		return buf.toString();
+	}
+	/**
+	 * @return the variable which contains this value
+	 */
+	public PerlVariable getHolder()
+	{
+		return holder;
+	}
 
-    public String getModelIdentifier()
-    {
-        return getDebugTarget().getModelIdentifier();
-    }
-    
-    /**
-     * Dumps subvariables of the variable which holds this value. 
-     * 
-     * @param subName   name of the dumpvar_epic.pm subroutine which
-     *                  should be invoked
-     */
-    protected String dumpEntity(String subName) throws DebugException
-    {
-        try
-        {
-            PerlVariable holder = getHolder();
-            if (!holder.getStackFrame().getThread().isSuspended()) return "";
+	/**
+	 * @see org.epic.debug.db.PerlVariable#getReferenceTypeName
+	 */
+	public String getReferenceTypeName() throws DebugException
+	{
+		return holder.getReferenceTypeName();
+	}
 
-            String code = HelperScript.replace(
-                DB_DUMP_ENTITY,
-                "#SET_OFFSET#",
-                "my $offset = " + holder.getStackFrame().getFrameIndex() + ";");
+	/**
+	 * @return the string displayed for this value in the overview
+	 *         section of the Variables view
+	 */
+	public String getValueString() throws DebugException
+	{
+		DumpedEntity entity = holder.getDumpedEntity();
+		String[] refChain = entity.getReferenceChain();
 
-            code = HelperScript.replace(
-                code,
-                "#SET_VAREXPR#",
-                "my $varexpr = <<'EOT';\n" + holder.getExpression() + "\nEOT");
+		boolean suppressSelfAddress = !ShowVarAddressActionDelegate.getPreferenceValue();
+		int start = suppressSelfAddress ? 1 : 0;
 
-            code = HelperScript.replace(
-                code,
-                "#SET_SUBREF#",
-                "my $subref = \\&dumpvar_epic::" + subName + ";");
-            
-            return holder.getDebuggerInterface().eval(code);
-        }
-        catch (IOException e)
-        {
-            throw new DebugException(new Status(
-                IStatus.ERROR,
-                PerlDebugPlugin.getUniqueIdentifier(),
-                IStatus.OK,
-                "An error occurred while retrieving variables from the debugger process",
-                e));
-        }
-    }
+		StringBuffer buf = new StringBuffer();
+		for (int i = start; i < refChain.length; i++)
+		{
+			if (i > start) buf.append("->");
+			buf.append(refChain[i]);
+		}
+
+		String detail = getDetailValue();
+		if (detail.length() > 0)
+		{
+			if (buf.length() > 0) buf.append('=');
+			if (detail.length() > 128)
+				detail = detail.substring(0, 128) + "...";
+			buf.append(detail);
+		}
+		return buf.toString();
+	}
+
+	public abstract PerlVariable[] getVariables() throws DebugException;
+
+	public abstract boolean hasVariables() throws DebugException;
+
+	public boolean isAllocated() throws DebugException
+	{
+		return true;
+	}
+
+	public String getModelIdentifier()
+	{
+		return getDebugTarget().getModelIdentifier();
+	}
+
+	/**
+	 * Dumps subvariables of the variable which holds this value. 
+	 * 
+	 * @param subName   name of the dumpvar_epic.pm subroutine which
+	 *                  should be invoked
+	 */
+	protected String dumpEntity(String subName) throws DebugException
+	{
+		try
+		{
+			PerlVariable holder = getHolder();
+			if (!holder.getStackFrame().getThread().isSuspended()) return "";
+
+			String code = HelperScript.replace(
+					DB_DUMP_ENTITY,
+					"#SET_OFFSET#",
+					"my $offset = " + holder.getStackFrame().getFrameIndex() + ";");
+
+			code = HelperScript.replace(
+					code,
+					"#SET_VAREXPR#",
+					"my $varexpr = <<'EOT';\n" + holder.getExpression() + "\nEOT");
+
+			code = HelperScript.replace(
+					code,
+					"#SET_SUBREF#",
+					"my $subref = \\&dumpvar_epic::" + subName + ";");
+
+			return holder.getDebuggerInterface().eval(code);
+		}
+		catch (IOException e)
+		{
+			throw new DebugException(new Status(
+					IStatus.ERROR,
+					PerlDebugPlugin.getUniqueIdentifier(),
+					IStatus.OK,
+					"An error occurred while retrieving variables from the debugger process",
+					e));
+		}
+	}
 }
