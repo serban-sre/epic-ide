@@ -93,6 +93,10 @@ public abstract class PerlValue extends DebugElement implements IValue
 		// no match
 		return "NA";
 	}
+	/**
+	 * @return the value string for data structures(ARRAY and HASH) built up from the references it contain
+	 * @throws DebugException
+	 */
 	public String getDataStructValueString() throws DebugException
 	{
 		DumpedEntity entity = this.holder.getDumpedEntity();
