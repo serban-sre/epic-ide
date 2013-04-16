@@ -50,7 +50,7 @@ public abstract class PerlValue extends DebugElement implements IValue
 		if (entity.getValue() != null) return "'" + entity.getValue() + "'";
 		// if this is ARRAY
 		if (this.holder.isArray()) {
-			ArrayList<String> result = new ArrayList<String>();
+			StringBuilder result = new StringBuilder("[");
 			PerlVariable[] ivarArr = getVariables();
 			if ((ivarArr == null) || (ivarArr.length == 0)) return "[ ]";
 			if (ivarArr[0] instanceof ArraySlice) {
@@ -59,36 +59,37 @@ public abstract class PerlValue extends DebugElement implements IValue
 			int maxArrayElements = 1;
 			for (PerlVariable iv : ivarArr) {
 				if (maxArrayElements > 10) {
-					result.add("...");
+					result.append("...");
 					break;
 				}
 				String refType = iv.getReferenceTypeName();
 				if (refType.equals("SCALAR")) {
-					result.add(iv.getValue().getValueString());
+					result.append(iv.getValue().getValueString() + ", ");
 				}  else
-					result.add(iv.getValue().getDataStructValueString());
+					result.append(iv.getValue().getDataStructValueString() + ", ");
+				++maxArrayElements;
 			}
-			return result.toString();
+			return result.replace(result.length() - 2, result.length() - 1, "]").toString();
 		}
 		// if this is HASH
 		if (this.holder.isHash()) {
-			ArrayList<String> result = new ArrayList<String>();
+			StringBuilder result = new StringBuilder("{");
 			PerlVariable[] ivarArr = getVariables();
 			if ((ivarArr == null) || (ivarArr.length == 0)) return "{ }";
 			int maxHashElements = 1;
 			for (PerlVariable iv : ivarArr) {
 				if (maxHashElements > 10) {
-					result.add("...");
+					result.append("...");
 					break;
 				}
 				if (iv.getReferenceTypeName().equals("SCALAR"))
-					result.add(iv.getName() + " => " + iv.getValue().getValueString());
+					result.append(iv.getName() + " => " + iv.getValue().getValueString() + ", ");
 				else 
-					result.add(iv.getName() + " => " + iv.getValue().getDataStructValueString());
+					result.append(iv.getName() + " => " + iv.getValue().getDataStructValueString() + ", ");
+				++maxHashElements;
 			}
-			String resultList = result.toString();
-			resultList = "{" + resultList.substring(1, resultList.length() - 1) + "}";
-			return resultList;
+			
+			return  result.replace(result.length() - 2, result.length() - 1, "}").toString();
 		}
 		// no match
 		return "NA";
